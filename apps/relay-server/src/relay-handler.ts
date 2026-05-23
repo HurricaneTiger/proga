@@ -6,6 +6,7 @@ import {
   type ErrorMessage,
   type TunnelDataMessage,
   type TunnelCloseMessage,
+  type TunnelStartMessage,
 } from '@minecraft-lan-tunnel/shared';
 import { RoomManager } from './room-manager.js';
 
@@ -17,6 +18,7 @@ interface ClientInfo {
 
 export class RelayHandler {
   private clientMap: Map<WebSocket, ClientInfo> = new Map();
+  private sessionMap: Map<string, WebSocket> = new Map();
   private roomManager: RoomManager;
 
   constructor(roomManager: RoomManager) {
@@ -49,6 +51,9 @@ export class RelayHandler {
         break;
       case MessageType.JoinRoom:
         this.handleJoinRoom(ws, message.inviteCode);
+        break;
+      case MessageType.TunnelStart:
+        this.handleTunnelStart(ws, message);
         break;
       case MessageType.TunnelData:
         this.handleTunnelData(ws, message);
@@ -114,6 +119,23 @@ export class RelayHandler {
     }
   }
 
+  private handleTunnelStart(ws: WebSocket, message: TunnelStartMessage): void {
+    const clientInfo = this.clientMap.get(ws);
+    if (!clientInfo) return;
+
+    const room = this.roomManager.getRoom(clientInfo.inviteCode);
+    if (!room) return;
+
+    if (clientInfo.role === 'client') {
+      // Register this session to the client that owns it
+      this.sessionMap.set(message.sessionId, ws);
+      // Forward TunnelStart to the host
+      if (room.hostWs.readyState === WebSocket.OPEN) {
+        room.hostWs.send(JSON.stringify(message));
+      }
+    }
+  }
+
   private handleTunnelData(ws: WebSocket, message: TunnelDataMessage): void {
     const clientInfo = this.clientMap.get(ws);
     if (!clientInfo) return;
@@ -122,16 +144,19 @@ export class RelayHandler {
     if (!room) return;
 
     if (clientInfo.role === 'client') {
+      // Register session mapping if not already registered
+      if (!this.sessionMap.has(message.sessionId)) {
+        this.sessionMap.set(message.sessionId, ws);
+      }
       // Forward from client to host
       if (room.hostWs.readyState === WebSocket.OPEN) {
         room.hostWs.send(JSON.stringify(message));
       }
     } else {
-      // Forward from host to correct client by sessionId
-      for (const client of room.clients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(message));
-        }
+      // Forward from host to the specific client that owns this session
+      const targetClient = this.sessionMap.get(message.sessionId);
+      if (targetClient && targetClient.readyState === WebSocket.OPEN) {
+        targetClient.send(JSON.stringify(message));
       }
     }
   }
@@ -149,18 +174,26 @@ export class RelayHandler {
         room.hostWs.send(JSON.stringify(message));
       }
     } else {
-      // Notify all clients
-      for (const client of room.clients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(message));
-        }
+      // Route to the specific client that owns this session
+      const targetClient = this.sessionMap.get(message.sessionId);
+      if (targetClient && targetClient.readyState === WebSocket.OPEN) {
+        targetClient.send(JSON.stringify(message));
       }
     }
+    // Clean up session mapping
+    this.sessionMap.delete(message.sessionId);
   }
 
   private handleDisconnect(ws: WebSocket): void {
     const clientInfo = this.clientMap.get(ws);
     if (!clientInfo) return;
+
+    // Clean up session mappings for this client
+    for (const [sessionId, clientWs] of this.sessionMap.entries()) {
+      if (clientWs === ws) {
+        this.sessionMap.delete(sessionId);
+      }
+    }
 
     const room = this.roomManager.getRoom(clientInfo.inviteCode);
     if (room) {

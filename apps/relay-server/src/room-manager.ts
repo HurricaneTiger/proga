@@ -97,6 +97,16 @@ export class RoomManager {
     for (const [code, room] of this.rooms.entries()) {
       if (now - room.createdAt.getTime() >= this.roomTimeoutMs) {
         room.status = RoomStatus.Closed;
+        // Close host WebSocket
+        if (room.hostWs.readyState === 1) {
+          room.hostWs.close();
+        }
+        // Close all client WebSockets
+        for (const client of room.clients) {
+          if (client.readyState === 1) {
+            client.close();
+          }
+        }
         this.rooms.delete(code);
       }
     }

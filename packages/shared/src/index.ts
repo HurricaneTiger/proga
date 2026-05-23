@@ -108,15 +108,16 @@ export const RECONNECT_MULTIPLIER = 2;
 
 // Invite code generation
 
+import { randomBytes } from 'crypto';
+
 const INVITE_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const INVITE_CODE_LENGTH = 6;
 
 export function generateInviteCode(): string {
+  const bytes = randomBytes(INVITE_CODE_LENGTH);
   let code = '';
   for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-    code += INVITE_CODE_CHARS.charAt(
-      Math.floor(Math.random() * INVITE_CODE_CHARS.length)
-    );
+    code += INVITE_CODE_CHARS.charAt(bytes[i] % INVITE_CODE_CHARS.length);
   }
   return code;
 }

@@ -6,14 +6,12 @@ import {
   type RoomJoinedMessage,
   type ProtocolMessage,
   type ErrorMessage,
+  type TunnelDataMessage,
+  type TunnelCloseMessage,
   DEFAULT_WS_PATH,
   DEFAULT_MINECRAFT_PORT,
 } from '@minecraft-lan-tunnel/shared';
 import {
-  encodeFrame,
-  decodeFrame,
-  FRAME_TYPE_TUNNEL_DATA,
-  FRAME_TYPE_TUNNEL_CLOSE,
   ReconnectionManager,
 } from '@minecraft-lan-tunnel/tunnel-core';
 import type { Logger } from './logger.js';
@@ -74,12 +72,6 @@ export class TunnelClient {
 
       this.ws.on('message', (data) => {
         try {
-          if (Buffer.isBuffer(data) || data instanceof ArrayBuffer) {
-            this.handleBinaryMessage(
-              Buffer.isBuffer(data) ? new Uint8Array(data) : new Uint8Array(data as ArrayBuffer)
-            );
-            return;
-          }
           const msg: ProtocolMessage = JSON.parse(data.toString());
           if (msg.type === MessageType.RoomJoined) {
             clearTimeout(timeout);
@@ -92,6 +84,19 @@ export class TunnelClient {
             reject(new Error((msg as ErrorMessage).message));
           } else if (msg.type === MessageType.StatusUpdate) {
             this.emitStatus();
+          } else if (msg.type === MessageType.TunnelData) {
+            const tunnelMsg = msg as TunnelDataMessage;
+            const socket = this.sessions.get(tunnelMsg.sessionId);
+            if (socket) {
+              socket.write(Buffer.from(tunnelMsg.data, 'base64'));
+            }
+          } else if (msg.type === MessageType.TunnelClose) {
+            const closeMsg = msg as TunnelCloseMessage;
+            const socket = this.sessions.get(closeMsg.sessionId);
+            if (socket) {
+              socket.destroy();
+              this.sessions.delete(closeMsg.sessionId);
+            }
           }
         } catch (e) {
           this.logger.error('Failed to parse message', {
@@ -135,16 +140,23 @@ export class TunnelClient {
 
         socket.on('data', (data) => {
           if (this.ws?.readyState === WebSocket.OPEN) {
-            const frame = encodeFrame(FRAME_TYPE_TUNNEL_DATA, sessionId, new Uint8Array(data));
-            this.ws.send(frame);
+            const msg: TunnelDataMessage = {
+              type: MessageType.TunnelData,
+              sessionId,
+              data: data.toString('base64'),
+            };
+            this.ws.send(JSON.stringify(msg));
           }
         });
 
         socket.on('close', () => {
           this.sessions.delete(sessionId);
           if (this.ws?.readyState === WebSocket.OPEN) {
-            const frame = encodeFrame(FRAME_TYPE_TUNNEL_CLOSE, sessionId);
-            this.ws.send(frame);
+            const msg: TunnelCloseMessage = {
+              type: MessageType.TunnelClose,
+              sessionId,
+            };
+            this.ws.send(JSON.stringify(msg));
           }
         });
 
@@ -170,28 +182,6 @@ export class TunnelClient {
 
       this.server.listen(preferredPort, '127.0.0.1');
     });
-  }
-
-  private handleBinaryMessage(data: Uint8Array): void {
-    try {
-      const frame = decodeFrame(data);
-      if (frame.type === FRAME_TYPE_TUNNEL_DATA) {
-        const socket = this.sessions.get(frame.sessionId);
-        if (socket) {
-          socket.write(Buffer.from(frame.payload));
-        }
-      } else if (frame.type === FRAME_TYPE_TUNNEL_CLOSE) {
-        const socket = this.sessions.get(frame.sessionId);
-        if (socket) {
-          socket.destroy();
-          this.sessions.delete(frame.sessionId);
-        }
-      }
-    } catch (e) {
-      this.logger.error('Failed to decode binary frame', {
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
   }
 
   private async handleDisconnect(): Promise<void> {

@@ -26,7 +26,7 @@ const server = createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-const wss = new WebSocketServer({ server, path: WS_PATH });
+const wss = new WebSocketServer({ server, path: WS_PATH, maxPayload: 1024 * 1024 });
 
 wss.on('connection', (ws) => {
   relayHandler.handleConnection(ws);
