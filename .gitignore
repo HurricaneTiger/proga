@@ -3,7 +3,9 @@ dist/
 dist-main/
 .env
 *.tsbuildinfo
+*.log
 .DS_Store
 out/
 release/
 coverage/
+.vite/
