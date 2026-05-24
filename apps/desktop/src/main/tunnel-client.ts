@@ -38,6 +38,7 @@ export class TunnelClient {
   private reconnectionManager = new ReconnectionManager();
   private reconnecting = false;
   private disconnected = false;
+  private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly relayUrl: string,
@@ -71,6 +72,7 @@ export class TunnelClient {
           type: MessageType.JoinRoom,
           inviteCode: this.inviteCode,
         }));
+        this.startKeepAlive();
       });
 
       this.ws.on('message', (data) => {
@@ -110,6 +112,7 @@ export class TunnelClient {
 
       this.ws.on('close', () => {
         this.hostOnline = false;
+        this.stopKeepAlive();
         this.emitStatus();
         if (!this.disconnected) {
           this.handleDisconnect();
@@ -232,6 +235,7 @@ export class TunnelClient {
   disconnect(): void {
     this.disconnected = true;
     this.reconnectionManager.cancel();
+    this.stopKeepAlive();
     for (const socket of this.sessions.values()) {
       socket.destroy();
     }
@@ -241,5 +245,21 @@ export class TunnelClient {
     this.ws?.close();
     this.ws = null;
     this.emitStatus();
+  }
+
+  private startKeepAlive(): void {
+    this.stopKeepAlive();
+    this.keepAliveInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: MessageType.HealthCheck }));
+      }
+    }, 45000); // Every 45 seconds
+  }
+
+  private stopKeepAlive(): void {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
   }
 }

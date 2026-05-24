@@ -37,6 +37,7 @@ export class TunnelHost {
   private reconnectionManager = new ReconnectionManager();
   private reconnecting = false;
   private disconnected = false;
+  private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly relayUrl: string,
@@ -58,6 +59,7 @@ export class TunnelHost {
 
       this.ws.on('open', () => {
         this.ws!.send(JSON.stringify({ type: MessageType.CreateRoom, minecraftPort: 0 }));
+        this.startKeepAlive();
       });
 
       this.ws.on('message', (data) => {
@@ -178,12 +180,29 @@ export class TunnelHost {
   private handleDisconnect(): void {
     this.tunnelActive = false;
     this.inviteCode = null;
+    this.stopKeepAlive();
     for (const socket of this.sessions.values()) {
       socket.destroy();
     }
     this.sessions.clear();
     this.logger.warn('Disconnected from relay. Please create a new room and share the new invite code.');
     this.emitStatus();
+  }
+
+  private startKeepAlive(): void {
+    this.stopKeepAlive();
+    this.keepAliveInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: MessageType.HealthCheck }));
+      }
+    }, 45000); // Every 45 seconds
+  }
+
+  private stopKeepAlive(): void {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
   }
 
   onStatusUpdate(callback: StatusCallback): void {
@@ -211,6 +230,7 @@ export class TunnelHost {
   disconnect(): void {
     this.disconnected = true;
     this.reconnectionManager.cancel();
+    this.stopKeepAlive();
     for (const socket of this.sessions.values()) {
       socket.destroy();
     }
