@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Package Electron desktop app with electron-builder for Windows, bundle relay server inside app, auto-start relay on launch with port selection.",
+  "status": "completed",
+  "steps": [
+    "Add electron-builder to apps/desktop as dev dependency and configure build section in package.json",
+    "Add bundle script to relay-server using esbuild to produce a single CJS file",
+    "Create relay server process manager in desktop main process",
+    "Modify apps/desktop/src/main/index.ts to auto-start and stop the relay server",
+    "Add build scripts (pack, dist, dist:win) to apps/desktop/package.json",
+    "Add root-level dist and pack scripts",
+    "Create scripts/build-release.sh build script",
+    "Expose relay server status to renderer via IPC"
+  ],
+  "acceptance_criteria": [
+    "npm run build compiles all packages without errors",
+    "npm test passes all tests",
+    "Relay server is bundled into apps/desktop/resources/relay-server.cjs",
+    "Main process has relay server process manager with port selection",
+    "Build scripts are correctly defined"
+  ],
+  "verification": [
+    "Run npm install and confirm exit code 0",
+    "Run npm run build and confirm exit code 0",
+    "Run npm test and confirm all tests pass",
+    "Verify resources/relay-server.cjs is generated"
+  ],
+  "blocked_reason": null,
+  "findings": "All acceptance criteria met. npm install, build, and test all pass cleanly. esbuild bundles the relay server (149KB) into apps/desktop/resources/relay-server.cjs. electron-builder v25 installed successfully. The RelayServerManager uses child_process.fork() with port scanning (3000-3009). The main process auto-starts relay on app ready and kills it on window-all-closed. Cannot test actual electron-builder packaging (requires Windows for .exe output) but configuration is complete and validated."
+}

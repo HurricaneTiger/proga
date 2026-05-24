@@ -1,0 +1,28 @@
+{
+  "project_type": "Minecraft LAN Tunnel - Electron + React desktop app with Node.js WebSocket relay server (monorepo)",
+  "language": "TypeScript",
+  "build_system": "npm workspaces, esbuild for relay bundling, vite + electron-builder for desktop",
+  "test_framework": "vitest (unit tests at root), manual integration test script (scripts/test-integration.ts)",
+  "build_command": "npm run build",
+  "test_command": "npm test",
+  "verification_instructions": "1. npm install, 2. npm run build (compiles all workspaces in order: shared -> tunnel-core -> relay-server -> desktop), 3. npm test (vitest), 4. Verify no TypeScript errors",
+  "snapshot_or_generated_files": "apps/desktop/resources/relay-server.cjs is generated via 'npm run bundle:relay' (esbuild bundles relay-server into single CJS file for Electron). dist/ and dist-main/ are build outputs but not checked in.",
+  "setup_instructions": "npm install && npm run build",
+  "environment_constraints": "OPEN_INTERNET - can install packages, access registries. No electron-builder packaging test possible (requires Windows for .exe). Cannot test actual Electron launch in sandbox.",
+  "contribution_requirements": "Follow existing code patterns. Ensure npm run build and npm test pass. TypeScript strict mode. UI in Russian language.",
+  "key_patterns": "Settings stored in localStorage via useSettings hook in useIpc.ts. IPC handlers in src/main/index.ts communicate between Electron main and renderer. RelayServerManager forks bundled relay-server.cjs as child process. Relay URL passed as parameter to createRoom/joinRoom IPC calls. Shared constants in packages/shared/src/index.ts.",
+  "relevant_files": [
+    "packages/shared/src/index.ts",
+    "apps/desktop/src/renderer/hooks/useIpc.ts",
+    "apps/desktop/src/renderer/pages/SettingsPage.tsx",
+    "apps/desktop/src/renderer/pages/CreateRoomPage.tsx",
+    "apps/desktop/src/renderer/pages/JoinRoomPage.tsx",
+    "apps/desktop/src/main/index.ts",
+    "apps/desktop/src/main/relay-server-manager.ts",
+    "apps/relay-server/src/index.ts",
+    "apps/relay-server/package.json",
+    "package.json",
+    ".gitignore"
+  ],
+  "directory_structure": "Monorepo: packages/shared (types, constants), packages/tunnel-core (binary framing, reconnection), apps/relay-server (WebSocket relay Node.js server), apps/desktop (Electron + React app with main/renderer processes)"
+}

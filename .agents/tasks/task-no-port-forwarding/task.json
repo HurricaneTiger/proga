@@ -1,0 +1,14 @@
+{
+  "task_id": "task-no-port-forwarding",
+  "task_description": "Make the Minecraft LAN Tunnel program work without port forwarding by adding public relay server support: deployment configs (Dockerfile, render.yaml, fly.toml), relay mode selection in the desktop app Settings (Public/Local/Custom), and one-click deploy instructions in README.",
+  "status": "completed",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "pass",
+    "summary": "npm run build compiles all 4 workspaces cleanly. All 21 tests pass. Docker multi-stage build succeeds. Semantic review v2 approved."
+  }
+}

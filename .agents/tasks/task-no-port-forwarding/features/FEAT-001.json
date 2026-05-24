@@ -1,0 +1,39 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add public relay support: deployment configs (Dockerfile, render.yaml, fly.toml), shared constant for public relay URL, and update the desktop app to support relay mode selection (Public/Local/Custom) in Settings with automatic fallback logic.",
+  "status": "completed",
+  "steps": [
+    "Step 1: Add PUBLIC_RELAY_URL constant to packages/shared/src/index.ts. Set it to 'wss://mc-lan-tunnel.onrender.com' as the default public relay placeholder. Keep existing DEFAULT_RELAY_PORT and DEFAULT_WS_PATH.",
+    "Step 2: Create /Dockerfile at repo root for the relay server. Use node:20-alpine, copy package.json and workspace files, npm ci --workspace=packages/shared --workspace=packages/tunnel-core --workspace=apps/relay-server, npm run build, expose PORT env (default 3000), CMD node apps/relay-server/dist/index.js.",
+    "Step 3: Create /.dockerignore at repo root with: node_modules, dist, dist-main, .git, release, .env, *.log, coverage, .vite, out.",
+    "Step 4: Create /render.yaml (Render Blueprint) at repo root. Define a web service: name mc-lan-tunnel-relay, env node, buildCommand 'npm install && npm run build', startCommand 'node apps/relay-server/dist/index.js', envVars RELAY_PORT=10000 (Render uses 10000), plan free, healthCheckPath /health.",
+    "Step 5: Create /fly.toml at repo root for Fly.io deployment. App name mc-lan-tunnel-relay, internal_port 3000, [http_service] with auto_stop_machines and min_machines_running 0, [build] dockerfile.",
+    "Step 6: Update apps/desktop/src/renderer/hooks/useIpc.ts - Change Settings interface to add relayMode field ('public' | 'local' | 'custom') and customRelayUrl field. Update DEFAULT_SETTINGS to set relayMode to 'public', relayUrl to the public relay URL (use ws:// + hostname + /ws pattern), and customRelayUrl to empty string. Add a helper function getEffectiveRelayUrl(settings) that returns the correct URL based on relayMode.",
+    "Step 7: Update apps/desktop/src/renderer/pages/SettingsPage.tsx - Replace the single relay URL text input with a relay mode selector (radio buttons or segmented control): 'Публичный сервер (интернет)' / 'Локальный (только LAN)' / 'Свой сервер'. When 'Публичный' is selected, show the public relay URL as read-only info. When 'Локальный' is selected, show info that built-in relay on localhost will be used. When 'Свой сервер' is selected, show an editable URL input. Save all settings via existing updateSettings mechanism.",
+    "Step 8: Update apps/desktop/src/renderer/pages/CreateRoomPage.tsx - Import and use getEffectiveRelayUrl from useIpc.ts instead of directly using settings.relayUrl. This ensures the correct relay URL is used based on the current mode.",
+    "Step 9: Update apps/desktop/src/renderer/pages/JoinRoomPage.tsx - Same as CreateRoomPage: use getEffectiveRelayUrl(settings) to determine relay URL when calling joinRoom.",
+    "Step 10: Update apps/desktop/src/main/index.ts - In the 'create-room' and 'join-room' IPC handlers, the relay URL is already passed from the renderer, so no changes needed here. But add a new IPC handler 'check-relay-health' that takes a URL and returns whether it's reachable (fetch /health endpoint).",
+    "Step 11: Update README.md - Add a new section '## Работа без проброса портов' explaining that the app can work through a public relay server. Add deployment instructions with one-click deploy buttons for Render.com ([![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/HurricaneTiger/proga)), Fly.io, and Docker. Explain that users can deploy their own free relay or use a community relay."
+  ],
+  "acceptance_criteria": [
+    "npm run build compiles all packages without TypeScript errors",
+    "npm test passes all existing tests",
+    "packages/shared/src/index.ts exports PUBLIC_RELAY_URL constant",
+    "Dockerfile exists at repo root and uses multi-stage or simple build for relay server",
+    "render.yaml exists with correct Render Blueprint configuration",
+    "fly.toml exists with Fly.io configuration",
+    ".dockerignore exists with appropriate exclusions",
+    "SettingsPage.tsx shows relay mode selector with three options (public/local/custom)",
+    "CreateRoomPage.tsx and JoinRoomPage.tsx use getEffectiveRelayUrl to resolve the relay URL",
+    "useIpc.ts has updated Settings interface with relayMode and customRelayUrl fields",
+    "README.md contains deployment instructions and one-click deploy buttons"
+  ],
+  "verification": [
+    "Run 'npm run build' in /projects/sandbox/proga and confirm exit code 0",
+    "Run 'npm test' in /projects/sandbox/proga and confirm all tests pass",
+    "Verify Dockerfile builds successfully with 'docker build -t mc-lan-tunnel-relay .'"
+  ],
+  "blocked_reason": null,
+  "findings": "All existing tests pass (21/21). Build compiles all workspaces without errors. The relay-server already had /health endpoint so check-relay-health IPC handler works with it. Used multi-stage Docker build to keep final image lean. Electron fetch API (global fetch in Node 20) used for health check in main process. Review fixes applied: useHealth now uses getEffectiveRelayUrl + deriveHealthUrl for proper health URL construction; Dockerfile and fly.toml use RELAY_PORT env var; custom URL validation added to SettingsPage; vestigial relayUrl field removed from Settings interface."
+}
