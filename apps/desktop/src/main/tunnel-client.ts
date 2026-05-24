@@ -14,7 +14,7 @@ import {
 import {
   ReconnectionManager,
 } from '@minecraft-lan-tunnel/tunnel-core';
-import type { Logger } from './logger.js';
+import type { Logger } from './logger';
 
 export interface TunnelClientStatus {
   role: 'client';

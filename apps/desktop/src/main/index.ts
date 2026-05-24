@@ -1,10 +1,10 @@
 import { app, BrowserWindow, ipcMain, clipboard } from 'electron';
 import path from 'path';
-import { TunnelHost } from './tunnel-host.js';
-import { TunnelClient } from './tunnel-client.js';
-import { PortDetector } from './port-detector.js';
-import { Logger } from './logger.js';
-import { RelayServerManager } from './relay-server-manager.js';
+import { TunnelHost } from './tunnel-host';
+import { TunnelClient } from './tunnel-client';
+import { PortDetector } from './port-detector';
+import { Logger } from './logger';
+import { RelayServerManager } from './relay-server-manager';
 
 let mainWindow: BrowserWindow | null = null;
 let tunnelHost: TunnelHost | null = null;
