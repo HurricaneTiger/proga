@@ -13,7 +13,10 @@
     "test": "vitest run",
     "test:integration": "npx tsx scripts/test-integration.ts",
     "server": "npm run dev -w apps/relay-server",
-    "desktop": "npm run dev -w apps/desktop"
+    "desktop": "npm run dev -w apps/desktop",
+    "bundle:relay": "npm run bundle -w apps/relay-server",
+    "dist": "npm run build && npm run bundle:relay && npm run dist -w apps/desktop",
+    "pack": "npm run build && npm run bundle:relay && npm run pack -w apps/desktop"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

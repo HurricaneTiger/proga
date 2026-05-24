@@ -4,12 +4,14 @@ import { TunnelHost } from './tunnel-host.js';
 import { TunnelClient } from './tunnel-client.js';
 import { PortDetector } from './port-detector.js';
 import { Logger } from './logger.js';
+import { RelayServerManager } from './relay-server-manager.js';
 
 let mainWindow: BrowserWindow | null = null;
 let tunnelHost: TunnelHost | null = null;
 let tunnelClient: TunnelClient | null = null;
 const portDetector = new PortDetector();
 const logger = new Logger();
+const relayServerManager = new RelayServerManager();
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -39,12 +41,28 @@ function createWindow(): void {
   logger.setWindow(mainWindow);
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  // Start the built-in relay server
+  try {
+    const relayPort = await relayServerManager.start();
+    logger.info('Built-in relay server started', { port: relayPort });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Failed to start built-in relay server', { error: message });
+  }
+
+  relayServerManager.setStatusCallback((status) => {
+    mainWindow?.webContents.send('relay-server-status', status);
+  });
+
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   tunnelHost?.disconnect();
   tunnelClient?.disconnect();
   portDetector.stop();
+  relayServerManager.stop();
   app.quit();
 });
 
@@ -155,4 +173,8 @@ ipcMain.handle('get-logs', async () => {
 ipcMain.handle('update-settings', async (_event, settings: Record<string, unknown>) => {
   logger.info('Settings updated', settings);
   return { success: true };
+});
+
+ipcMain.handle('get-relay-server-status', async () => {
+  return relayServerManager.getStatus();
 });
