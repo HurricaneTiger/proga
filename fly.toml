@@ -5,7 +5,7 @@ primary_region = "ams"
   dockerfile = "Dockerfile"
 
 [env]
-  PORT = "3000"
+  RELAY_PORT = "3000"
 
 [http_service]
   internal_port = 3000

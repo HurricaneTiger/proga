@@ -55,7 +55,6 @@ export interface LogEntryData {
 export type RelayMode = 'public' | 'local' | 'custom';
 
 interface Settings {
-  relayUrl: string;
   relayMode: RelayMode;
   customRelayUrl: string;
   localPort: number;
@@ -64,7 +63,6 @@ interface Settings {
 const PUBLIC_RELAY_URL = 'wss://mc-lan-tunnel.onrender.com';
 
 const DEFAULT_SETTINGS: Settings = {
-  relayUrl: PUBLIC_RELAY_URL + '/ws',
   relayMode: 'public',
   customRelayUrl: '',
   localPort: 25565,
@@ -156,16 +154,33 @@ export function useLogs() {
   return { logs, clearLogs };
 }
 
+function deriveHealthUrl(relayUrl: string): string {
+  let url = relayUrl;
+  // Strip /ws suffix
+  if (url.endsWith('/ws')) {
+    url = url.slice(0, -3);
+  }
+  // Convert WebSocket protocol to HTTP
+  if (url.startsWith('wss://')) {
+    url = 'https://' + url.slice(6);
+  } else if (url.startsWith('ws://')) {
+    url = 'http://' + url.slice(5);
+  }
+  return url + '/health';
+}
+
 // Health check hook
 export function useHealth() {
   const [relayConnected, setRelayConnected] = useState(false);
 
   useEffect(() => {
-    const { relayUrl } = loadSettings();
+    const settings = loadSettings();
+    const effectiveUrl = getEffectiveRelayUrl(settings);
+    const healthUrl = deriveHealthUrl(effectiveUrl);
 
     const checkHealth = async () => {
       try {
-        const response = await fetch(`${relayUrl}/health`, {
+        const response = await fetch(healthUrl, {
           signal: AbortSignal.timeout(3000),
         });
         setRelayConnected(response.ok);

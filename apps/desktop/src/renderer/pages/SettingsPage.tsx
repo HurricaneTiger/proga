@@ -4,14 +4,25 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useSettings, RelayMode } from '../hooks/useIpc';
 
+function isValidRelayUrl(url: string): boolean {
+  if (!url.trim()) return false;
+  return /^(wss?|https?):\/\/.+/i.test(url.trim());
+}
+
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
   const [relayMode, setRelayMode] = useState<RelayMode>(settings.relayMode);
   const [customRelayUrl, setCustomRelayUrl] = useState(settings.customRelayUrl);
   const [localPort, setLocalPort] = useState(String(settings.localPort));
   const [saved, setSaved] = useState(false);
+  const [urlError, setUrlError] = useState('');
 
   const handleSave = () => {
+    if (relayMode === 'custom' && !isValidRelayUrl(customRelayUrl)) {
+      setUrlError('URL должен начинаться с ws://, wss://, http:// или https://');
+      return;
+    }
+    setUrlError('');
     const portNum = parseInt(localPort, 10) || 25565;
     updateSettings({ relayMode, customRelayUrl, localPort: portNum });
     setSaved(true);
@@ -89,13 +100,21 @@ export function SettingsPage() {
             </div>
 
             {relayMode === 'custom' && (
-              <input
-                type="text"
-                value={customRelayUrl}
-                onChange={(e) => setCustomRelayUrl(e.target.value)}
-                className="w-full mt-3 bg-dark-700 border border-dark-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 outline-none focus:border-primary-500 transition-colors duration-200"
-                placeholder="wss://your-server.com/ws"
-              />
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={customRelayUrl}
+                  onChange={(e) => {
+                    setCustomRelayUrl(e.target.value);
+                    setUrlError('');
+                  }}
+                  className="w-full bg-dark-700 border border-dark-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 outline-none focus:border-primary-500 transition-colors duration-200"
+                  placeholder="wss://your-server.com/ws"
+                />
+                {urlError && (
+                  <p className="text-xs text-red-400 mt-1">{urlError}</p>
+                )}
+              </div>
             )}
           </div>
 
