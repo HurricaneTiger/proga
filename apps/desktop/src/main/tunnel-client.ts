@@ -55,7 +55,10 @@ export class TunnelClient {
 
   private connectToRelay(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wsUrl = this.relayUrl.replace(/^http/, 'ws') + DEFAULT_WS_PATH;
+      let wsUrl = this.relayUrl.replace(/^http/, 'ws');
+      if (!wsUrl.endsWith('/ws')) {
+        wsUrl += DEFAULT_WS_PATH;
+      }
       this.ws = new WebSocket(wsUrl);
 
       const timeout = setTimeout(() => {
