@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-main
+.git
+release
+.env
+*.log
+coverage
+.vite
+out

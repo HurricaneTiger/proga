@@ -2,22 +2,23 @@ import React, { useState } from 'react';
 import { Save, Check } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { useSettings } from '../hooks/useIpc';
+import { useSettings, RelayMode } from '../hooks/useIpc';
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettings();
-  const [relayUrl, setRelayUrl] = useState(settings.relayUrl);
+  const [relayMode, setRelayMode] = useState<RelayMode>(settings.relayMode);
+  const [customRelayUrl, setCustomRelayUrl] = useState(settings.customRelayUrl);
   const [localPort, setLocalPort] = useState(String(settings.localPort));
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
     const portNum = parseInt(localPort, 10) || 25565;
-    updateSettings({ relayUrl, localPort: portNum });
+    updateSettings({ relayMode, customRelayUrl, localPort: portNum });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
 
     if (window.electronAPI) {
-      window.electronAPI.updateSettings({ relayUrl, localPort: portNum });
+      window.electronAPI.updateSettings({ relayMode, customRelayUrl, localPort: portNum });
     }
   };
 
@@ -28,16 +29,74 @@ export function SettingsPage() {
       <Card>
         <div className="space-y-4">
           <div>
-            <label className="text-sm text-gray-400 block mb-1">
-              Адрес relay-сервера
+            <label className="text-sm text-gray-400 block mb-2">
+              Режим relay-сервера
             </label>
-            <input
-              type="text"
-              value={relayUrl}
-              onChange={(e) => setRelayUrl(e.target.value)}
-              className="w-full bg-dark-700 border border-dark-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 outline-none focus:border-primary-500 transition-colors duration-200"
-              placeholder="http://localhost:3000"
-            />
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-dark-600 hover:border-primary-500 transition-colors duration-200"
+                style={{ borderColor: relayMode === 'public' ? 'rgb(var(--color-primary-500, 139 92 246))' : undefined }}>
+                <input
+                  type="radio"
+                  name="relayMode"
+                  value="public"
+                  checked={relayMode === 'public'}
+                  onChange={() => setRelayMode('public')}
+                  className="mt-1"
+                />
+                <div>
+                  <span className="text-white font-medium">Публичный сервер (интернет)</span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    wss://mc-lan-tunnel.onrender.com - бесплатный relay для игры через интернет
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-dark-600 hover:border-primary-500 transition-colors duration-200"
+                style={{ borderColor: relayMode === 'local' ? 'rgb(var(--color-primary-500, 139 92 246))' : undefined }}>
+                <input
+                  type="radio"
+                  name="relayMode"
+                  value="local"
+                  checked={relayMode === 'local'}
+                  onChange={() => setRelayMode('local')}
+                  className="mt-1"
+                />
+                <div>
+                  <span className="text-white font-medium">Локальный (только LAN)</span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Встроенный relay на localhost:3000 - для игры в одной локальной сети
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-dark-600 hover:border-primary-500 transition-colors duration-200"
+                style={{ borderColor: relayMode === 'custom' ? 'rgb(var(--color-primary-500, 139 92 246))' : undefined }}>
+                <input
+                  type="radio"
+                  name="relayMode"
+                  value="custom"
+                  checked={relayMode === 'custom'}
+                  onChange={() => setRelayMode('custom')}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <span className="text-white font-medium">Свой сервер</span>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Укажите адрес своего relay-сервера
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {relayMode === 'custom' && (
+              <input
+                type="text"
+                value={customRelayUrl}
+                onChange={(e) => setCustomRelayUrl(e.target.value)}
+                className="w-full mt-3 bg-dark-700 border border-dark-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 outline-none focus:border-primary-500 transition-colors duration-200"
+                placeholder="wss://your-server.com/ws"
+              />
+            )}
           </div>
 
           <div>

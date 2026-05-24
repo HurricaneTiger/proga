@@ -100,6 +100,7 @@ export type ProtocolMessage =
 export const DEFAULT_RELAY_PORT = 3000;
 export const DEFAULT_WS_PATH = '/ws';
 export const DEFAULT_MINECRAFT_PORT = 25565;
+export const PUBLIC_RELAY_URL = 'wss://mc-lan-tunnel.onrender.com';
 export const MAX_ROOMS = 100;
 export const ROOM_TIMEOUT_MS = 3600000; // 1 hour
 export const RECONNECT_INTERVAL_MS = 1000;

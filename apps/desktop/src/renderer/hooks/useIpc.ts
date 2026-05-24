@@ -52,15 +52,36 @@ export interface LogEntryData {
   details?: Record<string, unknown>;
 }
 
+export type RelayMode = 'public' | 'local' | 'custom';
+
 interface Settings {
   relayUrl: string;
+  relayMode: RelayMode;
+  customRelayUrl: string;
   localPort: number;
 }
 
+const PUBLIC_RELAY_URL = 'wss://mc-lan-tunnel.onrender.com';
+
 const DEFAULT_SETTINGS: Settings = {
-  relayUrl: 'http://localhost:3000',
+  relayUrl: PUBLIC_RELAY_URL + '/ws',
+  relayMode: 'public',
+  customRelayUrl: '',
   localPort: 25565,
 };
+
+export function getEffectiveRelayUrl(settings: Settings): string {
+  switch (settings.relayMode) {
+    case 'public':
+      return PUBLIC_RELAY_URL + '/ws';
+    case 'local':
+      return 'http://localhost:3000';
+    case 'custom':
+      return settings.customRelayUrl || 'http://localhost:3000';
+    default:
+      return PUBLIC_RELAY_URL + '/ws';
+  }
+}
 
 function loadSettings(): Settings {
   try {

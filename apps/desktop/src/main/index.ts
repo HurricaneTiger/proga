@@ -178,3 +178,15 @@ ipcMain.handle('update-settings', async (_event, settings: Record<string, unknow
 ipcMain.handle('get-relay-server-status', async () => {
   return relayServerManager.getStatus();
 });
+
+ipcMain.handle('check-relay-health', async (_event, url: string) => {
+  try {
+    const healthUrl = url.replace(/\/ws$/, '') + '/health';
+    const response = await fetch(healthUrl, {
+      signal: AbortSignal.timeout(5000),
+    });
+    return { success: true, healthy: response.ok };
+  } catch {
+    return { success: true, healthy: false };
+  }
+});

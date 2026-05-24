@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mc-lan-tunnel-relay
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node apps/relay-server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: RELAY_PORT
+        value: "10000"

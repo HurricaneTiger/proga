@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { InviteCodeDisplay } from '../components/InviteCodeDisplay';
 import { Button } from '../components/Button';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { useSettings } from '../hooks/useIpc';
+import { useSettings, getEffectiveRelayUrl } from '../hooks/useIpc';
 
 export function CreateRoomPage() {
   const navigate = useNavigate();
@@ -17,7 +17,8 @@ export function CreateRoomPage() {
     const createRoom = async () => {
       try {
         if (window.electronAPI) {
-          const result = await window.electronAPI.createRoom(settings.relayUrl);
+          const relayUrl = getEffectiveRelayUrl(settings);
+          const result = await window.electronAPI.createRoom(relayUrl);
           if (result.success && result.inviteCode) {
             setInviteCode(result.inviteCode);
           } else {
@@ -37,7 +38,7 @@ export function CreateRoomPage() {
     };
 
     createRoom();
-  }, [settings.relayUrl]);
+  }, [settings.relayMode, settings.customRelayUrl]);
 
   if (loading) {
     return (

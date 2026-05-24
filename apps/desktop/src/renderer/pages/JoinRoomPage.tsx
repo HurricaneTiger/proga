@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { useSettings } from '../hooks/useIpc';
+import { useSettings, getEffectiveRelayUrl } from '../hooks/useIpc';
 
 export function JoinRoomPage() {
   const navigate = useNavigate();
@@ -29,7 +29,8 @@ export function JoinRoomPage() {
 
     try {
       if (window.electronAPI) {
-        const result = await window.electronAPI.joinRoom(settings.relayUrl, code);
+        const relayUrl = getEffectiveRelayUrl(settings);
+        const result = await window.electronAPI.joinRoom(relayUrl, code);
         if (result.success) {
           navigate('/room/client');
         } else {
